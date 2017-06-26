@@ -24,7 +24,9 @@ In this activity, you'll be creating an storefront for Justin Bieber themed merc
 
 ## Demo
 
-
+<h1 align="center">
+    <img src="assets/media/biebaystore.gif"  alt="bieber store demo video">
+</h1>
 
 ### Customer View 
 
