@@ -7,29 +7,24 @@
 This is a node command-line application that processes orders for a Justin Bieber themed store. The application is written entirely in ES6 and transpiled using babel.
 
 Running the app:
-> DEBUG=* src/app.js
-
-Building the app:
-> npm run build
-
-Building the docs:
-> npm run docs
+> node src/app.js 
 
 Browse the github documentation:
 > npm docs
 
 ## Packages
-- [babel-cli](https://www.npmjs.com/package/babel-cli)
-- [chalk](https://www.npmjs.com/package/chalk)
-- [commander](https://www.npmjs.com/package/commander)
-- [debug](https://www.npmjs.com/package/debug)
-- [jsdoc](https://www.npmjs.com/package/jsdoc)
 - [inquirer](https://www.npmjs.com/package/inquirer)
 - [mysql](https://www.npmjs.com/package/mysql)
+- [exec-sql](https://www.npmjs.com/package/exec-sql)
+- [path](https://www.npmjs.com/package/path)
 
 ## Overview
 
 In this activity, you'll be creating an storefront for Justin Bieber themed merchandise with the MySQL skills you learned this week. The app will take in orders from customers and deplete stock from the store's inventory. As a bonus task, you can program your app to track product sales across your store's departments and then provide a summary of the highest-grossing departments in the store.
+
+## Demo
+
+
 
 ### Customer View 
 
@@ -67,8 +62,6 @@ In this activity, you'll be creating an storefront for Justin Bieber themed merc
 8. However, if your store _does_ have enough of the product, you should fulfill the customer's order.
    * This means updating the SQL database to reflect the remaining quantity.
    * Once the update goes through, show the customer the total cost of their purchase.
-
-## Examples
 
 ## License
 

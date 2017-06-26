@@ -1,95 +1,136 @@
-#!/usr/bin/npm start
-// Calls npm to start this script; requires a start target in package.json
+// Include packages to make connections to mysql and
+// prompt the user for input
+var mysql = require("mysql");
+var inquirer = require("inquirer");
+var execSQL = require('exec-sql');
+var path = require('path');
 
-/**
- * @fileOverview Backend for a basic flashcard application
- * @author Marcus Hobbs
- * @requires {@link https://www.npmjs.com/package/babel-cli|babel-cli}
- * @requires {@link https://www.npmjs.com/package/chalk|chalk}
- * @requires {@link https://www.npmjs.com/package/debug|debug}
- * @requires {@link https://www.npmjs.com/package/commander|commander}
- * @requires {@link https://www.npmjs.com/package/jsdoc|jsdoc}
- * @version 0.0.1
- * @license [MIT]{@link https://opensource.org/licenses/MIT}
- * @see [Babel]{@link https://babeljs.io/} for more information on ES6 transpiling
- */
+// Credentials used to connect to the SQL database
+const credentials = { user: 'ubuntu', passwd: 'mm5138888!!' };
 
-/** Import a set of generally useful tools */
-import chalk from 'chalk';      // Chalk colorizes console output
-import debug from 'debug';      // Debug provides configurable console output
-import app from 'commander';    // Provides utils for command line apps
+// Make a connection to the database
+execSQL.connect('mysql', credentials.user, credentials.passwd );
 
-/** Import application specific objects */
-import { BasicCard } from './BasicCard.js'; // Get the BasicCard constructor
-import { ClozeCard } from './ClozeCard.js'; // Get the ClozeCard constructor
+// When the script successfully executes, set a flag
+var sqlScripted = false;
 
-// The logger outputs debug information
-// DEBUG logs will be prepended with FLSHCRD indicator
-const log = debug('FLSHCRD');
+// Execute all of the SQL scripts in the relative path
+execSQL.executeDirectory(path.join(__dirname,'assets/scripts'), function(err) {
+    execSQL.disconnect();
+    sqlScripted = true;
+});
 
-/** Decorate the logger with a signature move */
-log.mytag = () => {
-    // Define a chalk style to colorize error messages
-    let style = chalk.bgRed.bold.yellow;
-    let mytag = " ̿ ̿\̵͇̿̿\з=(◕_◕)=ε/̵͇̿̿/'̿'̿ ̿"; // We signs our work for the masses
-    log(style(mytag));
-};
+// Create the connection information for the sql database
+var connection = mysql.createConnection({
+    host: "localhost",
+    port: 3306,
+    user: credentials.user,
+    password: credentials.passwd,
+    database: "bieBay"
+});
 
-/**
- * Logs an error message to the STDERR stream
- * @name logError
- * @function
- * @global
- * @param {string} text - The error message to log
- * @example log.error("A BAD THING HAPPENED!");
- */
-log.error = (text) => {
-    // Define a chalk style to colorize error messages
-    let style = chalk.bgRed.bold.white;
-	console.error(style(text));
-};
+// When the sql connection succeeds, set a flag
+var sqlConnected = false;
 
-/**
- * Logs a message to the STDOUT stream
- * @name logInfo
- * @function
- * @global
- * @param {string} text - The message to log
- * @example log.info("We did a neat thing.");
- */
-log.info = (text) => {
-    // Define a chalk style to colorize messages
-    let style = chalk.green;
-	console.log(style(text));
-};
+// Connect to the mysql server and sql database
+connection.connect(function(err) {
+    if (err) throw err;
+    sqlConnected = true;
+});
 
-// Let the user know whose work copypasta
-log.mytag();
+// Query the database and display the resulting product list
+function listProducts() {
+    // Display the set of products available for purchase
+    connection.query("SELECT item_id,product_name,price FROM products", function(err, results) {
+        if (err) throw err;
 
-const firstPresident = new BasicCard("Who was the first president of the United States?", "George Washington");
+        // Print each row of the result
+        results.forEach( (row) => {
+            console.log(row.item_id + ", " + row.product_name + ", $" + row.price);
+        });
 
-// "Who was the first president of the United States?"
-log.info(firstPresident.front);
-
-// "George Washington"
-log.info(firstPresident.back);
-
-const firstPresidentCloze = new ClozeCard("George Washington was the first president of the United States.", "George Washington");
-
-// "George Washington"
-log.info(firstPresidentCloze.cloze);
-
-// " ... was the first president of the United States.
-log.info(firstPresidentCloze.partial);
-
-// "George Washington was the first president of the United States.
-log.info(firstPresidentCloze.fullText);
-
-// Should throw or log an error because "oops" doesn't appear in "This doesn't work"
-try {
-    const brokenCloze = new ClozeCard("This doesn't work", "oops");
+        placeOrder();
+    });
 }
-catch (anException) {
-    // Log the exception message
-    log.error(anException.message);
+
+// Get the user's order
+// If there is stock, update the database with order information
+// Otherwise tell the user it's insufficient
+function placeOrder() {
+
+  // Get the product to purchase from the user
+  inquirer
+    .prompt([
+      {
+        name: "id",
+        type: "input",
+        message: "What is the ID of the product you would like to purchase?"
+      },
+      {
+        name: "quantity",
+        type: "input",
+        message: "How many of the product do you want to purchase?"
+      }
+    ])
+    .then(function(answer) {
+
+        console.log("You want to purchase " + answer.quantity + " of product ID " + answer.id);
+
+        // Make sure there is enough of the item to purchase
+        connection.query(
+            "SELECT price,stock_quantity FROM products WHERE item_id = ? LIMIT 1",
+            {
+                item_id: answer.id,
+            },
+            function(err, results) {
+                if (err) throw err;
+
+                var price = results[0].price;
+                var stock = results[0].stock_quantity;
+                console.log("The inventory of product ID " + answer.id + " is " + stock + " items");
+
+                if (stock <= 0) {
+                    console.log("Insufficient quantity to complete order");
+                    connection.end();
+                }
+                else {
+
+                    stock -= answer.quantity;
+
+                    // Update the inventory amount with the amount purchased
+                    connection.query(
+                        "UPDATE products SET stock_quantity = ? WHERE item_id = ?",
+                        [
+                          {
+                            stock_quantity: stock
+                          },
+                          {
+                            item_id: answer.id
+                          }
+                        ],
+                        function(err) {
+                            if (err) throw err;
+                            console.log("Total Cost of Order: $" + (price * answer.quantity));
+                            connection.end();
+                        }
+                    );
+                }
+            }
+        );
+    });
 }
+
+// Configure the database, list products, get the user's order, update the database
+function waitForDatabase() {
+
+    if (!sqlScripted || !sqlConnected) {
+        setTimeout(waitForDatabase, 10);
+    }
+    if (sqlScripted && sqlConnected) {
+        console.log("Database configured and connected.");
+        listProducts();
+    }
+}
+
+// Start the chain of callbacks
+waitForDatabase();
