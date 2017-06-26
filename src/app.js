@@ -89,7 +89,7 @@ function placeOrder() {
                 var stock = results[0].stock_quantity;
                 console.log("The inventory of product ID " + answer.id + " is " + stock + " items");
 
-                if (stock <= 0) {
+                if (stock < answer.quantity) {
                     console.log("Insufficient quantity to complete order");
                     connection.end();
                 }
