@@ -15,7 +15,7 @@ execSQL.connect('mysql', credentials.user, credentials.passwd );
 var sqlScripted = false;
 
 // Execute all of the SQL scripts in the relative path
-execSQL.executeDirectory(path.join(__dirname,'assets/scripts'), function(err) {
+execSQL.executeDirectory(path.join(__dirname,'../assets/scripts'), function(err) {
     execSQL.disconnect();
     sqlScripted = true;
 });
